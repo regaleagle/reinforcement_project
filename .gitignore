@@ -1,1 +1,8 @@
 .idea/
+.DS_Store
+__pycache__/
+probability/
+testresults/
+test2/
+test3/
+summary/
