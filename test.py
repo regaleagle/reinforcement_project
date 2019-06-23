@@ -138,7 +138,7 @@ class TrainEval(object):
       # Params for collect
       initial_collect_steps=80000,  # ALE frames
       epsilon_greedy=0.01,
-      epsilon_decay_period=1000000,  # ALE frames
+      epsilon_decay_period=3000000,  # ALE frames
       replay_buffer_capacity=1000000,
       # Params for train
       train_steps_per_iteration=1000000,  # ALE frames

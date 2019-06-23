@@ -69,7 +69,7 @@ def compute_avg_return(environment, policy, num_episodes=5):
   return avg_return.numpy()[0]
 
 
-def run(env_name):
+def run(env_name, agent_type):
     tf.compat.v1.enable_v2_behavior()
     tf.enable_eager_execution()
     batch_size = 30  # @param
