@@ -1,25 +1,29 @@
 
 
-from atari_q_network import AtariQNetwork
-from agents.tf_agents.agents.dqn import dqn_agent
+from atari_actor_network import AtariActorNetwork
+from agents.tf_agents.agents.ppo import ppo_agent
+from agents.tf_agents.networks import value_network
 import tensorflow as tf
 
 
-class Ddq_Agent(dqn_agent.DdqnAgent):
+class Ppo_Agent(ppo_agent.PPOAgent):
     def __init__(self,
                  convolutional_layers,
                  fully_connected_layers,
                  tf_env,
                  global_step,
-                 epsilon_greedy = 0.1,
-                 n_step_update = 25,
-                 target_update_period = 100,
-                 target_update_tau=0.1):
+                 num_epochs=25,
+                 entropy_regularization=0.2):
 
-        q_net = AtariQNetwork(
+        value_net = value_network.ValueNetwork(
+            tf_env.observation_spec(), conv_layer_params=convolutional_layers, fc_layer_params=fully_connected_layers)
+
+        actor_net = AtariActorNetwork(
             tf_env.observation_spec(),
             tf_env.action_spec(),
             fc_layer_params=fully_connected_layers, conv_layer_params=convolutional_layers)
+
+        optimiser = tf.compat.v1.train.AdamOptimizer(learning_rate=1e-4)
 
 
         # self.agent = tf_agent = dqn_agent.DdqnAgent(
@@ -38,16 +42,12 @@ class Ddq_Agent(dqn_agent.DdqnAgent):
         #         train_step_counter=global_step)
         #     tf_agent.initialize()
 
-        super(Ddq_Agent, self).__init__(
+        super(Ppo_Agent, self).__init__(
             tf_env.time_step_spec(),
             tf_env.action_spec(),
-            q_network=q_net,
-            epsilon_greedy=epsilon_greedy,
-            n_step_update=n_step_update,
-            optimizer=tf.compat.v1.train.RMSPropOptimizer(2.5e-4),
-            target_update_period=target_update_period,
-            td_errors_loss_fn=dqn_agent.element_wise_huber_loss,
-            target_update_tau=target_update_tau,
-            gamma=0.9,
-            # gradient_clipping=gradient_clipping, #investigate gradients and consider clipping
-            train_step_counter=global_step)
+            optimiser,
+            actor_net=actor_net,
+            value_net=value_net,
+            num_epochs=num_epochs,
+            train_step_counter=global_step,
+            entropy_regularization=entropy_regularization)

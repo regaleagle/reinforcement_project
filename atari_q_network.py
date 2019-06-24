@@ -1,6 +1,6 @@
-from tf_agents.networks import q_network
-from tf_agents.networks import actor_distribution_network
-from tf_agents.agents.ddpg import critic_network
+from agents.tf_agents.networks import q_network
+from agents.tf_agents.networks import actor_distribution_network
+from agents.tf_agents.agents.ddpg import critic_network
 import tensorflow as tf
 
 class AtariQNetwork(q_network.QNetwork):
