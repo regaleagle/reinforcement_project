@@ -27,6 +27,7 @@ import time
 from agents.tf_agents.environments import parallel_py_environment
 import os
 from absl import logging
+import imageio
 
 
 class EpsilonMetric(tf_metric.TFStepMetric):
@@ -49,7 +50,7 @@ class EpsilonMetric(tf_metric.TFStepMetric):
 
 
 
-def run(env_name, agent_type, root_dir="result_dir_", trial_num = None, n_step = 25, parameters = Parameters()):
+def run(env_name, agent_type, root_dir="result_dir_", trial_num = None, n_step = 25, exploration_min=0.1, parameters = Parameters()):
 
     logging.set_verbosity(logging.INFO)
 
@@ -64,7 +65,7 @@ def run(env_name, agent_type, root_dir="result_dir_", trial_num = None, n_step =
     fc_layer_params = parameters.fc_layer_params
     num_iterations = parameters.num_iterations
     target_update_period = parameters.target_update_period
-    epsilon_greedy = parameters.epsilon_greedy
+    exploration_min = exploration_min
     replay_buffer_capacity = parameters.replay_buffer_capacity
     target_update_tau = parameters.target_update_tau
     collect_episodes_per_iteration = parameters.collect_episodes_per_iteration
@@ -98,6 +99,11 @@ def run(env_name, agent_type, root_dir="result_dir_", trial_num = None, n_step =
                 max_episode_steps=50000,
                 gym_env_wrappers=suite_atari.DEFAULT_ATARI_GYM_WRAPPERS_WITH_STACKING)] * num_parallel_environments))
 
+        eval_py_env = suite_atari.load(
+                env_name,
+                max_episode_steps=50000,
+                gym_env_wrappers=suite_atari.DEFAULT_ATARI_GYM_WRAPPERS_WITH_STACKING)
+        eval_env = tf_py_environment.TFPyEnvironment(eval_py_env)
         environment_episode_metric = tf_metrics.NumberOfEpisodes()
         step_metrics = [
             tf_metrics.EnvironmentSteps(),
@@ -113,7 +119,7 @@ def run(env_name, agent_type, root_dir="result_dir_", trial_num = None, n_step =
                 learning_rate=1.0,
                 global_step=global_step,
                 decay_steps=5000,
-                end_learning_rate=epsilon_greedy)
+                end_learning_rate=exploration_min)
 
             epsilon_metric = EpsilonMetric(epsilon=epsilon, name="Epsilon")
 
@@ -127,14 +133,14 @@ def run(env_name, agent_type, root_dir="result_dir_", trial_num = None, n_step =
                 epsilon_metric
             ]
         elif agent_type == 'ppo':
-            beta = tf.compat.v1.train.polynomial_decay(
-                learning_rate=1.0,
-                global_step=global_step,
-                decay_steps=5000,
-                end_learning_rate=epsilon_greedy)
+            # beta = tf.compat.v1.train.polynomial_decay(
+            #     learning_rate=1.0,
+            #     global_step=global_step,
+            #     decay_steps=5000,
+            #     end_learning_rate=exploration_min)
             agent = Ppo_Agent(convolutional_layers=conv_layer_params, fully_connected_layers=fc_layer_params,
-                              tf_env=train_env, global_step=global_step, entropy_regularization=beta)
-
+                              tf_env=train_env, global_step=global_step, entropy_regularization=exploration_min)
+            # beta_metric = EpsilonMetric(epsilon=beta, name="Beta")
             # Metrics for Tensorboard
             train_metrics = step_metrics + [
                 tf_metrics.AverageReturnMetric(),
@@ -142,6 +148,11 @@ def run(env_name, agent_type, root_dir="result_dir_", trial_num = None, n_step =
             ]
         else:
             raise ValueError('No appropriate agent found')
+
+        eval_metrics = step_metrics + [
+            tf_metrics.AverageReturnMetric(),
+            tf_metrics.AverageEpisodeLengthMetric()
+        ]
 
         agent.initialize()
 
@@ -308,15 +319,15 @@ def run(env_name, agent_type, root_dir="result_dir_", trial_num = None, n_step =
                 if global_step.numpy() % eval_interval == 0:
                     results = metric_utils.eager_compute(
                         eval_metrics,
-                        eval_tf_env,
+                        train_env,
                         eval_policy,
-                        num_episodes=num_eval_episodes,
+                        num_episodes=100,
                         train_step=global_step,
-                        summary_writer=eval_summary_writer,
+                        summary_writer=train_summary_writer,
                         summary_prefix='Metrics',
                     )
-                    if eval_metrics_callback is not None:
-                        eval_metrics_callback(results, global_step.numpy())
+                    # if eval_metrics_callback is not None:
+                    #     eval_metrics_callback(results, global_step.numpy())
                     metric_utils.log_metrics(eval_metrics)
 
         elif agent_type == 'ppo':
@@ -385,22 +396,24 @@ def run(env_name, agent_type, root_dir="result_dir_", trial_num = None, n_step =
         #     summary_writer=eval_summary_writer,
         #     summary_prefix='Metrics',
         # )
-
-
-
-
-
-
-
+        num_episodes = 3
+        video_filename = 'sac_minitaur.mp4'
+        with imageio.get_writer(video_filename, fps=60) as video:
+            for _ in range(num_episodes):
+                time_step = eval_env.reset()
+                video.append_data(eval_py_env.render())
+                while not time_step.is_last():
+                    action_step = agent.policy.action(time_step)
+                    time_step = eval_env.step(action_step.action)
+                    video.append_data(eval_py_env.render())
 
 if __name__ == '__main__':
-  run(env_name='BreakoutDeterministic-v4',agent_type='ppo', parameters=Parameters(
+  run(env_name='BreakoutDeterministic-v4',agent_type='ppo', exploration_min=0.2, parameters=Parameters(
       summary_interval=10,
       conv_layer_params=((32, (8, 8), 4), (64, (4, 4), 2), (64, (3, 3), 1)),
       fc_layer_params=(512,),
       num_iterations=1000000,
       target_update_period=100,
-      epsilon_greedy=0.1,
       replay_buffer_capacity=100000,
       target_update_tau=0.1,
       collect_episodes_per_iteration=20,
@@ -409,6 +422,6 @@ if __name__ == '__main__':
       initial_collect_episodes=1000,
       num_environment_episodes=1000000,
       log_interval=200,
-      eval_interval=10000,
+      eval_interval=5000,
       checkpoint_interval=2000
   ))

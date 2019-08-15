@@ -5,7 +5,6 @@ class Parameters:
                  fc_layer_params = (512,),
                  num_iterations = 1000000,
                  target_update_period=200,
-                 epsilon_greedy=0.1,
                  replay_buffer_capacity=100000,
                  target_update_tau=0.1,
                  collect_episodes_per_iteration=20,
@@ -21,7 +20,6 @@ class Parameters:
         self.fc_layer_params = fc_layer_params
         self.num_iterations = num_iterations
         self.target_update_period = target_update_period
-        self.epsilon_greedy = epsilon_greedy
         self.replay_buffer_capacity = replay_buffer_capacity
         self.target_update_tau = target_update_tau
         self.collect_episodes_per_iteration = collect_episodes_per_iteration
