@@ -1,0 +1,34 @@
+class Parameters:
+    def __init__(self,
+                 summary_interval = 10,
+                 conv_layer_params = ((32, (8, 8), 4), (64, (4, 4), 2), (64, (3, 3), 1)),
+                 fc_layer_params = (512,),
+                 num_iterations = 1000000,
+                 target_update_period=200,
+                 epsilon_greedy=0.1,
+                 replay_buffer_capacity=100000,
+                 target_update_tau=0.1,
+                 collect_episodes_per_iteration=20,
+                 num_parallel_environments=4,
+                 use_tf_functions=True,
+                 initial_collect_episodes=1000,
+                 num_environment_episodes=1000000,
+                 log_interval=200,
+                 eval_interval=10000,
+                 checkpoint_interval=2000):
+        self.summary_interval = summary_interval
+        self.conv_layer_params = conv_layer_params
+        self.fc_layer_params = fc_layer_params
+        self.num_iterations = num_iterations
+        self.target_update_period = target_update_period
+        self.epsilon_greedy = epsilon_greedy
+        self.replay_buffer_capacity = replay_buffer_capacity
+        self.target_update_tau = target_update_tau
+        self.collect_episodes_per_iteration = collect_episodes_per_iteration
+        self.num_parallel_environments = num_parallel_environments
+        self.use_tf_functions = use_tf_functions
+        self.initial_collect_episodes = initial_collect_episodes
+        self.num_environment_episodes = num_environment_episodes
+        self.log_interval = log_interval
+        self.eval_interval = eval_interval
+        self.checkpoint_interval = checkpoint_interval
